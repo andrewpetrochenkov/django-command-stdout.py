@@ -1,26 +1,11 @@
-[![](https://img.shields.io/badge/released-2021.6.21-green.svg?longCache=True)](https://pypi.org/project/django-command-stat/)
-[![](https://img.shields.io/badge/license-Unlicense-blue.svg?longCache=True)](https://unlicense.org/)
-
 ### Installation
 ```bash
-$ pip install django-command-stat
+$ pip install django-command-stdout
 ```
-
-### How it works
-collected statistics:
-+   calls count
-+   errors count
-+   cpu time
-+   memory
-+   started, finished time
-
-implementations:
-+   `StatCommand` management command class
-+   `@command_stat` decorator
 
 #### `settings.py`
 ```python
-INSTALLED_APPS+=['django_command_stat']
+INSTALLED_APPS+=['django_command_stdout']
 ```
 
 #### `migrate`
@@ -29,34 +14,33 @@ $ python manage.py migrate
 ```
 
 ### Examples
-`StatCommand`
+`@command_stdout` decorator
 ```python
-from django_command_stat.management.base import StatCommand
-
-class Command(StatCommand):
-    def handle(self,*args,**options):
-        # your code
-```
-
-`@command_stat` decorator
-```python
-from django_command_stat.decorators import command_stat
+from django_command_stdout.decorators import command_stdout
 
 class Command(BaseCommand):
-    @command_stat
-    def handle(self,*args,**kwargs):
-        ...
+    @command_stdout
+    def handle(self,*args,**options):
 ```
 
+`BaseCommand`
 ```python
-class BaseCommand(BaseCommand):
-    def execute(self,*args,**kwargs):
-        return command_stat(self.handle)(self,*args,**kwargs)
+import io
+from django.core.management.base import BaseCommand
+from django_command_stdout.models import Stdout
+
+class Command(BaseCommand):
+    def execute(self, *args, **options):
+        command = type(self).__module__.split('.')[-1]
+        with io.StringIO() as f:
+            super().execute(*args, stdout=f,**options)
+            Stdout(command=command,stdout=f.getvalue()).save()
 ```
 
+`call_command`
 ```python
-from django.core.management import call_command
+from django_command_stdout.utils import call_command
 
-command_stat(call_command)(name,*args,**options)
+call_command('name',*args,**options)
 ```
 
